@@ -48,3 +48,49 @@ jobs:
           path: output/
           if-no-files-found: warn
           retention-days: 14
+  publish:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Sigilbound-battle-baseline-verified-in-PyBoy
+          path: output
+      - name: Validate evidence and prepare release notes
+        env:
+          EXPECTED_COMMIT: ${{ github.sha }}
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib, json, os
+          root = Path('output')
+          rom = root / 'Sigilbound_Battle_Baseline.gb'
+          report = json.loads((root / 'emulator/report.json').read_text())
+          if report.get('passed') is not True:
+              raise SystemExit('Refusing to publish failed verification')
+          if report.get('commit') != os.environ['EXPECTED_COMMIT']:
+              raise SystemExit('Verification commit mismatch')
+          if hashlib.sha256(rom.read_bytes()).hexdigest() != report.get('rom_sha256'):
+              raise SystemExit('ROM hash mismatch')
+          for name in ('startup.png', 'victory.png', 'defeat.png'):
+              if not (root / 'emulator' / name).is_file():
+                  raise SystemExit('Missing screenshot: ' + name)
+          notes = '# Sigilbound battle diagnostic prerelease\n\n'
+          notes += 'Standalone Nugwolf battle test, NOT the full adventure.\n'
+          notes += 'Scripted PyBoy checks passed. Delta remains unverified; screenshots need visual review.\n'
+          notes += 'A: attack. B: brace. Release between turns. A/B after result resets the fixture.\n\n'
+          notes += '## Exact verification report\n\n```json\n'
+          notes += json.dumps(report, indent=2) + '\n```\n'
+          (root / 'RELEASE_NOTES.md').write_text(notes)
+          PY
+      - name: Publish diagnostic prerelease and downloadable assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_COMMIT: ${{ github.sha }}
+        run: |
+          gh release create "battle-test-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"             --repo "$GH_REPO"             --target "$RELEASE_COMMIT"             --prerelease             --title "Sigilbound battle diagnostic - run ${GITHUB_RUN_NUMBER}"             --notes-file output/RELEASE_NOTES.md             output/Sigilbound_Battle_Baseline.gb             output/validation.json             output/emulator/report.json             output/emulator/startup.png             output/emulator/victory.png             output/emulator/defeat.png
