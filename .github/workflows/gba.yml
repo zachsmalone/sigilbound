@@ -19,10 +19,17 @@ jobs:
           /tmp/sigilbound-battle-test
       - name: Cross-compile GBA ROM with devkitARM
         run: |
-          docker run --rm -v "$PWD:/work" -w /work devkitpro/devkitarm:latest make -C gba
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" -w /work devkitpro/devkitarm:latest make -C gba
           test -s gba/build/Sigilbound_GBA_Battle.gba
       - name: Record build identity and verification limits
         run: |
+          id
+          ls -ldn gba/build
+          ls -ln gba/build/Sigilbound_GBA_Battle.gba
+          if [ ! -w gba/build ]; then
+            echo '::error::Build directory is not writable by the runner; check Docker UID/GID.'
+            exit 1
+          fi
           sha256sum gba/build/Sigilbound_GBA_Battle.gba > gba/build/SHA256SUMS.txt
           printf 'Commit: %s\nC++ logic tests passed; cross-compilation succeeded.\nGBA emulator boot, rendered output, input timing, and Delta are NOT yet verified.\n' "$GITHUB_SHA" > gba/build/BUILD_STATUS.txt
       - uses: actions/upload-artifact@v4
