@@ -1,0 +1,37 @@
+name: Build Sigilbound GBA C++ battle slice
+on:
+  workflow_dispatch:
+  push:
+    paths: ['gba/**', '.github/workflows/gba.yml']
+  pull_request:
+    paths: ['gba/**', '.github/workflows/gba.yml']
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test shared C++ combat logic
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -Igba/include gba/tests/battle_test.cpp -o /tmp/sigilbound-battle-test
+          /tmp/sigilbound-battle-test
+      - name: Cross-compile GBA ROM with devkitARM
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work devkitpro/devkitarm:latest make -C gba
+          test -s gba/build/Sigilbound_GBA_Battle.gba
+      - name: Record build identity and verification limits
+        run: |
+          sha256sum gba/build/Sigilbound_GBA_Battle.gba > gba/build/SHA256SUMS.txt
+          printf 'Commit: %s\nC++ logic tests passed; cross-compilation succeeded.\nGBA emulator boot, rendered output, input timing, and Delta are NOT yet verified.\n' "$GITHUB_SHA" > gba/build/BUILD_STATUS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sigilbound-GBA-Cpp-Battle-Unverified-In-Emulator
+          path: |
+            gba/build/*.gba
+            gba/build/*.elf
+            gba/build/SHA256SUMS.txt
+            gba/build/BUILD_STATUS.txt
+          if-no-files-found: error
+          retention-days: 14
