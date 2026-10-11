@@ -67,11 +67,13 @@ static const char* const wolf[16]={
     "0003222231233000","0003222222223300","0000322222111330","0000322221113300",
     "0033322223333000","0322222222230000","3222222222223000","3222222222223000",
     "0333222222223000","0003223332230000","0003230032300000","0003330033300000"};
+// Mode 3 framebuffer occupies 0x06000000..0x06012BFF.
+// Place 4bpp OBJ tiles after it. Tile base 0x06010000 = tile index 2048 (32 bytes/tile).
+constexpr int OBJ_TILE_BASE = 2048;
 void init_sprites() {
     auto palette=reinterpret_cast<volatile u16*>(0x05000200);
     palette[1]=rgb(28,26,19); palette[2]=rgb(15,17,22); palette[3]=rgb(3,4,7);
-    // Mode 3 reserves lower OBJ tile IDs; start at tile 512 (0x06014000).
-    auto tiles=reinterpret_cast<volatile u16*>(0x06014000);
+    auto tiles=reinterpret_cast<volatile u16*>(0x06010000);
     for (int tile=0; tile<4; ++tile) for (int row=0; row<8; ++row)
         for (int half=0; half<2; ++half) {
             u16 packed=0;
@@ -81,8 +83,9 @@ void init_sprites() {
         }
     auto oam=reinterpret_cast<volatile u16*>(0x07000000);
     for (int i=0; i<128; ++i) { oam[i*4]=0x0200; oam[i*4+1]=0; oam[i*4+2]=0; oam[i*4+3]=0; }
-    oam[0]=58; oam[1]=40 | (1<<14); oam[2]=512;
-    oam[4]=58; oam[5]=184 | (1<<14) | (1<<12); oam[6]=512;
+    // 16x16 square, 1D mapping, tile base 2048. H-flip on right sprite.
+    oam[0]=58; oam[1]=40 | (1<<14); oam[2]=OBJ_TILE_BASE;
+    oam[4]=58; oam[5]=184 | (1<<14) | (1<<12); oam[6]=OBJ_TILE_BASE;
 }
 void draw(const sigilbound::Battle& b) {
     display=0x0080; // Forced blank while updating framebuffer and OBJ data.
