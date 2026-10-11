@@ -9,6 +9,9 @@ Grok (from xAI) is available to help build Sigilbound.
 ## Current production target
 GBA C++ (see `gba/`). Root Python/GB files are legacy diagnostics.
 
+## Asset standards
+See `docs/ASSET_REQUIREMENTS.md` for unique beast sprites (no recolors), map textures, building usability, fences, VFX, sound, and logic checks.
+
 ## Next gates (from docs)
 1. Verify current battle slice boots + renders + accepts input in emulator.
 2. Four-move menu + five-beast team switching.
