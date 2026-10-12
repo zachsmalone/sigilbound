@@ -49,5 +49,14 @@ struct Battle {
         // Placeholder: still uses the diagnostic numbers until full rules are implemented.
         return act(false);
     }
+    // Voluntary switch. Rejects out-of-range and zero-HP targets.
+    // Forced switch on faint is not implemented yet.
+    bool switch_active(int index) {
+        if (result != Result::active) return false;
+        if (index < 0 || index >= player.count) return false;
+        if (player.members[index].hp <= 0) return false;
+        player.active = index;
+        return true;
+    }
 };
 }
