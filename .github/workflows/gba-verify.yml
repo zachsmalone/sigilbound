@@ -33,7 +33,9 @@ jobs:
           sudo apt-get install -y libmgba-dev build-essential
           dpkg-query -W libmgba-dev > evidence/EMULATOR_PACKAGE.txt
       - name: Compile verification harness
-        run: cc -std=c11 -Wall -Wextra -Werror gba/verification/runtime.c -lmgba -o /tmp/sigilbound-mgba-test
+        run: |
+          set -o pipefail
+          cc -std=c11 -D_GNU_SOURCE -include limits.h -Wall -Wextra -Werror gba/verification/runtime.c -lmgba -o /tmp/sigilbound-mgba-test 2>&1 | tee evidence/compile.log
       - name: Execute exact ROM and capture screenshots
         run: |
           set -o pipefail
