@@ -1,0 +1,49 @@
+name: Verify exact GBA candidate in mGBA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['gba/verification/**', '.github/workflows/gba-verify.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: mkdir -p evidence
+      - name: Retrieve original candidate, not a rebuild
+        uses: actions/download-artifact@v4
+        with:
+          name: Sigilbound-GBA-Cpp-Battle-Unverified-In-Emulator
+          run-id: 38185099919
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          path: candidate
+      - name: Enforce exact candidate identity
+        run: |
+          printf '%s  %s\n' '265330806564e91df5f0ad37d9496437cedab2185c19e668179c70d1ef5e6a9c' 'candidate/Sigilbound_GBA_Battle.gba' | sha256sum -c -
+          sha256sum candidate/Sigilbound_GBA_Battle.gba > evidence/ROM_SHA256.txt
+          printf 'Candidate commit: 5bc81343fe761cd7621e7a6960a9c913e8bfaea9\nSource run: 38185099919\nHarness commit: %s\n' "$GITHUB_SHA" > evidence/IDENTITY.txt
+      - name: Install headless mGBA development library
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmgba-dev build-essential
+          dpkg-query -W libmgba-dev > evidence/EMULATOR_PACKAGE.txt
+      - name: Compile verification harness
+        run: cc -std=c11 -Wall -Wextra -Werror gba/verification/runtime.c -lmgba -o /tmp/sigilbound-mgba-test
+      - name: Execute exact ROM and capture screenshots
+        run: |
+          set -o pipefail
+          timeout 120 /tmp/sigilbound-mgba-test candidate/Sigilbound_GBA_Battle.gba 2>&1 | tee evidence/runtime.log
+          printf 'Automated runtime and framebuffer-memory checks passed.\nSprite appearance, mirroring, complete UI readability and screenshots still require visual review.\nDelta is NOT tested.\n' > evidence/STATUS.txt
+      - name: Upload runtime evidence even after failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sigilbound-GBA-Candidate-mGBA-Evidence
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 14
