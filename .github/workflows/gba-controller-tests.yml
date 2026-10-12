@@ -1,0 +1,18 @@
+name: Test standalone C++ battle menus and switching
+on:
+  workflow_dispatch:
+  push:
+    paths: ['gba/include/team.hpp', 'gba/include/battle_controller.hpp', 'gba/tests/controller_test.cpp', '.github/workflows/gba-controller-tests.yml']
+  pull_request:
+    paths: ['gba/include/team.hpp', 'gba/include/battle_controller.hpp', 'gba/tests/controller_test.cpp', '.github/workflows/gba-controller-tests.yml']
+permissions:
+  contents: read
+jobs:
+  controller-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined -Igba/include gba/tests/controller_test.cpp -o /tmp/sigilbound-controller-test
+          /tmp/sigilbound-controller-test
