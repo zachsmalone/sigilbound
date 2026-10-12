@@ -1,0 +1,19 @@
+name: Test C++ five-beast team foundation
+on:
+  workflow_dispatch:
+  push:
+    paths: ['gba/include/team.hpp', 'gba/tests/team_test.cpp', '.github/workflows/gba-team-tests.yml']
+  pull_request:
+    paths: ['gba/include/team.hpp', 'gba/tests/team_test.cpp', '.github/workflows/gba-team-tests.yml']
+permissions:
+  contents: read
+jobs:
+  team-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and execute standalone team tests
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined -Igba/include gba/tests/team_test.cpp -o /tmp/sigilbound-team-test
+          /tmp/sigilbound-team-test
