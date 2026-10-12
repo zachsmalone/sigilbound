@@ -25,10 +25,14 @@ int main() {
     assert(b.player.members[0].equipped == 2);
     assert(b.player.members[1].id == "beast-002");
 
-    // Active switch stays inside count.
-    b.player.active = 1;
-    assert(b.player.active == 1);
-    b.player.active = 0;
+    // Voluntary switch.
+    assert(b.switch_active(1) && b.player.active == 1);
+    assert(!b.switch_active(5));
+    assert(!b.switch_active(-1));
+    b.player.members[1].hp = 0;
+    assert(!b.switch_active(1)); // zero HP blocked
+    b.player.members[1].hp = 18;
+    assert(b.switch_active(0) && b.player.active == 0);
 
     // act_move rejects invalid slots.
     assert(!b.act_move(5));
